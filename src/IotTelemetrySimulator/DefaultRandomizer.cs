@@ -4,14 +4,24 @@
 
     public class DefaultRandomizer : IRandomizer
     {
-        Random randomGenerator = new Random();
+        [ThreadStatic]
+        private static Random generator;
 
-        public int GetNext(int min, int max)
+        private static Random RandomGenerator => generator ??= new Random();
+
+        public int Next()
         {
-            lock (this.randomGenerator)
-            {
-                return this.randomGenerator.Next(min, max);
-            }
+            return RandomGenerator.Next();
+        }
+
+        public int Next(int max)
+        {
+            return RandomGenerator.Next(max);
+        }
+
+        public int Next(int min, int max)
+        {
+            return RandomGenerator.Next(min, max);
         }
     }
 }
