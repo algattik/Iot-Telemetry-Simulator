@@ -1,6 +1,7 @@
 ﻿namespace IotTelemetrySimulator
 {
     using System;
+    using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -8,6 +9,7 @@
     {
         private readonly ISender sender;
         private RunnerConfiguration config;
+        private IRandomizer random = new DefaultRandomizer();
 
         public string DeviceID { get; private set; }
 
@@ -30,10 +32,17 @@
                 await this.sender.OpenAsync();
                 stats.IncrementDeviceConnected();
 
+                // Delay first event by a random amount to avoid bursts
+                await Task.Delay(this.random.Next(this.config.Interval), cancellationToken);
+
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
                 for (var i = 0; !cancellationToken.IsCancellationRequested && (this.config.MessageCount <= 0 || i < this.config.MessageCount); i++)
                 {
-                    await Task.Delay(this.config.Interval, cancellationToken);
                     await this.sender.SendMessageAsync(stats, cancellationToken);
+
+                    await Task.Delay(Math.Max(0, this.config.Interval - (int)stopwatch.ElapsedMilliseconds), cancellationToken);
+                    stopwatch.Restart();
                 }
 
                 stats.IncrementCompletedDevice();
